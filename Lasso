@@ -1,0 +1,38 @@
+import numpy as np
+import pandas as pd
+import sklearn as sk
+from sklearn.metrics import r2_score
+from sklearn.metrics import make_scorer
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Lasso
+from IPython.display import display
+
+# input data
+
+data=pd.read_csv('CDC/Capacitor 1-1000-final.csv',sep=';')
+capacitance=data['capacitance'][:,np.newaxis]
+features=data.drop('capacitance', axis=1)
+
+# Split data in train set and test set
+X_train,X_test,y_train,y_test=train_test_split(features, capacitance, test_size=0.1, random_state=0)
+
+# print (X_train.shape)
+# print (X_test.shape)
+# print (X_test)
+
+alpha = 0.1
+lasso = Lasso(alpha=alpha)
+
+y_pred_lasso = lasso.fit(X_train, y_train).predict(X_test)
+r2_score_lasso = r2_score(y_test, y_pred_lasso)
+print(lasso)
+print("r^2 on test data : %f" % r2_score_lasso)
+
+
+#检测模型
+exam_data=[[0.8,1591,9,0.93,5.27],[0.8,682,3.8,1.62,0],[1,187.5,4.4,3.32,9.2],[1,910,1.04,1.01,3.1],[3.5,20,0.72,1.02,0],
+            [0.9,884.6,6.2,1.53,10.081],[1,4073,7.2,1.121,0.55],[0.9,2856,9.1392,0.83,2.2]]
+
+for i, capacitance in enumerate(lasso.predict(exam_data)):
+    print (i,capacitance)
+    i=i+1
