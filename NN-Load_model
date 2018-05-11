@@ -1,0 +1,111 @@
+#5维输入，5-5-2三层神经网络，需要cost function才能用
+
+import numpy as np
+import tensorflow as tf
+import pandas as pd
+import sklearn as sk
+from sklearn.model_selection import train_test_split
+from tensorflow.python.framework import ops
+from sklearn import preprocessing
+
+# input data
+data=pd.read_csv('CDC/Capacitor 1-1000-final-guiyi-2.csv',sep=';') #pore size 是计算的
+#归一化的方法是：（真实数值-平均值）/(最大值-最小值)
+capacitance=data['capacitance'][:,np.newaxis]
+features=data.drop('capacitance', axis=1)
+yuce1=pd.read_csv('CDC/yuce2.csv',sep=';')
+
+yuce=yuce1.T
+
+# Split data in train set and test set
+X1,X2,Y1,Y2=train_test_split(features, capacitance, test_size=0.1, random_state=0)
+# X_train=preprocessing.normalize(X1.T, norm='l2')
+# X_test=preprocessing.normalize(X2.T, norm='l2')
+# Y_train=preprocessing.normalize(Y1.T, norm='l2')
+# Y_test=preprocessing.normalize(Y2.T, norm='l2')
+X_train=X1.T
+X_test=X2.T
+Y_train=Y1.T
+Y_test=Y2.T
+
+#数据预处理 模板
+# X_std = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0))
+# print(X_train.shape)
+# print(Y_train.shape)
+# print(X_test.shape)
+# print(Y_test.shape)
+
+# define placeholder for inputs to network
+def creat_placeholder(n_x,n_y):
+    X = tf.placeholder(tf.float32, [n_x, None])
+    Y = tf.placeholder(tf.float32, [n_y,None])
+    return X,Y
+
+def initialize_parameters(n_inputs,n_l1,n_l2,n_l3):
+    W1=tf.get_variable('W1',[n_inputs,n_l1],initializer=tf.contrib.layers.xavier_initializer())
+    b1=tf.get_variable('b1',[n_l1,1],initializer=tf.zeros_initializer())
+    W2=tf.get_variable('W2',[n_l2,n_l1],initializer=tf.contrib.layers.xavier_initializer())
+    b2=tf.get_variable('b2',[n_l2,1],initializer=tf.zeros_initializer())
+    W3=tf.get_variable('W3',[n_l3,n_l2],initializer=tf.contrib.layers.xavier_initializer())
+    b3=tf.get_variable('b3',[n_l3,1],initializer=tf.zeros_initializer())
+
+    parameters={'W1':W1,'b1':b1,'W2':W2,'b2':b2,'W3':W3,'b3':b3}
+
+    return parameters
+
+###需要调整激活函数！！！
+def forward_propagation(X,parameters):
+    W1=parameters['W1']
+    b1=parameters['b1']
+    W2=parameters['W2']
+    b2=parameters['b2']
+    W3=parameters['W3']
+    b3=parameters['b3']
+
+    Z1=tf.matmul(W1,X)+b1
+    A1=tf.nn.tanh(Z1)
+    Z2=tf.matmul(W2,A1)+b2
+    A2=tf.nn.tanh(Z2)
+    Z3=tf.matmul(W3,A2)+b3
+
+    return Z3
+
+###需要调整cost function
+def comput_cost(Z3,Y):
+
+    cost = tf.reduce_mean(tf.reduce_sum((Y-Z3)**2))
+
+    return cost
+
+
+
+learning_rate=0.005
+
+ops.reset_default_graph()
+(n_x,m) = X_train.shape #样品总个数m
+n_y = Y_train.shape[0]
+costs=[]
+
+X,Y=creat_placeholder(n_x,n_y)
+
+parameters=initialize_parameters(n_x,5,5,2)
+
+Z3=forward_propagation(X,parameters)
+
+cost=comput_cost(Z3,Y)
+
+optimizer=tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
+
+
+    # optimizer=tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
+
+init = tf.global_variables_initializer()
+
+with tf.Session() as sess:
+
+    sess.run(init)
+    saver = tf.train.Saver()
+    saver.restore(sess, "Capacitor-NN-parameters/ckp")
+
+    result = sess.run(Z3, feed_dict={X:yuce})
+    print(result)
